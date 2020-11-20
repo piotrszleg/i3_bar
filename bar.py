@@ -5,11 +5,33 @@ import threading, queue
 from time import sleep
 
 i3 = Connection()
-
 q = queue.Queue()
+ui = tk.Tk()
+ui.title("pybar")
+offset_x=0
+offset_y=0
+down=False
 
-top = tk.Tk()
-top.title("pybar")
+def motion(event):
+    if not down:
+        return
+    x=event.x+ui.winfo_x()-offset_x
+    y=event.y+ui.winfo_y()-offset_y
+    ui.geometry(f"+{x}+{y}")
+
+def mouse_down(event):
+    global down, offset_x, offset_y
+    down=True
+    offset_x=event.x
+    offset_y=event.y
+
+def mouse_up(_):
+    global down
+    down=False
+
+ui.bind('<Motion>', motion)
+ui.bind('<ButtonPress>', mouse_down)
+ui.bind('<ButtonRelease>', mouse_up)
 
 def switch_to_workspace(workspace_index):
     i3.command(f"move container to workspace {workspace_index}")
@@ -19,7 +41,7 @@ def filter_for_tk(text):
     return "".join([text[j] for j in range(len(text)) if ord(text[j]) in range(65536)])
 
 def update_ui(workspaces):
-    for child in top.winfo_children():
+    for child in ui.winfo_children():
         child.destroy()
     for workspace in workspaces:
         if workspace.focused:
@@ -27,7 +49,7 @@ def update_ui(workspaces):
         else:
             state="normal"
         callback=partial(switch_to_workspace, workspace.num)
-        button = tk.Button(top, text=filter_for_tk(workspace.name or ""), command = callback, state=state)
+        button = tk.Button(ui, pady=2, padx=5, text=filter_for_tk(workspace.name or ""), command = callback, state=state)
         button.pack(side="left")
 
 def i3_update():
@@ -43,7 +65,7 @@ def i3_thread():
 
 threading.Thread(target=i3_thread).start()
 while True:
-    top.update()
+    ui.update()
     try:
         update_ui(q.get_nowait())
     except queue.Empty:
