@@ -1,11 +1,4 @@
-import gi
-
-gi.require_version("Gdk", "3.0")
-gi.require_version("Gtk", "3.0")
-
-from gi.repository import Gdk
-from gi.repository import Gtk
-
+import tkinter as tk
 from functools import partial
 from i3ipc import Connection, Event
 import threading, queue
@@ -13,37 +6,18 @@ from time import sleep
 
 q = queue.Queue()
 
-class Bar():
+class Bar(tk.Tk):
     def __init__(self):
         super().__init__()
-        CSS = b"""
-        #toplevel {
-            background-color: rgba(0, 0, 0, 0);
-        }
-        button {
-            background-image: none;
-        background-color: rgba(0, 0, 0, 0.7);
-        }
-        """
-
-        style_provider = Gtk.CssProvider()
-        style_provider.load_from_data(CSS)
-
-        Gtk.StyleContext.add_provider_for_screen(
-            Gdk.Screen.get_default(),
-            style_provider,
-            Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
-        )
-
-        window = Gtk.Window(title="pybar", name="toplevel")
-        screen = window.get_screen()
-        visual = screen.get_rgba_visual()
-        window.set_visual(visual)
-        self.box=Gtk.Box(spacing=0)
-        window.add(self.box)
-        window.show_all()
-        window.connect("destroy", Gtk.main_quit)
-        self.window=window
+        self.bind('<Motion>', self.motion)
+        self.bind('<ButtonPress-3>', self.mouse_down)
+        self.bind('<ButtonRelease-3>', self.mouse_up)
+        self.title("pybar")
+        self.wait_visibility(self)
+        self.wm_attributes('-alpha', 0.1)
+        self.offset_x=0
+        self.offset_y=0
+        self.down=False
     
     def motion(self, event):
         if not self.down:
@@ -60,24 +34,21 @@ class Bar():
     def mouse_up(self, _):
         self.down=False
 
-    def update(self):
-        Gtk.main_iteration()
-
     @staticmethod
     def filter_for_tk(text):
         return "".join([text[j] for j in range(len(text)) if ord(text[j]) in range(65536)])
 
     def update_buttons(self, workspaces, callback):
-        for child in self.box.get_children():
-            self.box.remove(child)
+        for child in self.winfo_children():
+            child.destroy()
         for workspace in workspaces:
-            button1 = Gtk.Button(label=self.filter_for_tk(workspace.name or ""))
-            button1.set_margin_bottom(50)
-            button1.set_margin_top(50)
-            button1.num=workspace.num
-            button1.connect("clicked", lambda button: callback(button.num))
-            self.box.pack_start(button1, True, True, 0)
-        self.window.show_all()
+            if workspace.focused:
+                state="disabled"
+            else:
+                state="normal"
+            command=partial(callback, workspace.num)
+            button = tk.Button(self, pady=1, padx=5, text=self.filter_for_tk(workspace.name or ""), command = command, state=state)
+            button.pack(side="left")
 
 class I3Thread(threading.Thread):
     def __init__(self, queue):
