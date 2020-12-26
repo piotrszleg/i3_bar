@@ -13,16 +13,25 @@ from time import sleep
 
 q = queue.Queue()
 
+BUTTON_SIZE=30
+
 class Bar():
     def __init__(self):
         super().__init__()
         CSS = b"""
         #toplevel {
             background-color: rgba(0, 0, 0, 0);
+            min-height:0px;
+            padding:0;
+            margin:0;
         }
         button {
             background-image: none;
-        background-color: rgba(0, 0, 0, 0.7);
+            background-color: rgba(0, 0, 0, 0.7);
+            padding:0px;
+            margin:0px;
+            border:0px;
+            min-height:0px;
         }
         """
 
@@ -44,6 +53,7 @@ class Bar():
         window.show_all()
         window.connect("destroy", Gtk.main_quit)
         self.window=window
+        self.screen=screen
     
     def motion(self, event):
         if not self.down:
@@ -72,11 +82,19 @@ class Bar():
             self.box.remove(child)
         for workspace in workspaces:
             button1 = Gtk.Button(label=self.filter_for_tk(workspace.name or ""))
-            button1.set_margin_bottom(50)
-            button1.set_margin_top(50)
+            button1.set_margin_bottom(0)
+            button1.set_margin_top(0)
             button1.num=workspace.num
+            
             button1.connect("clicked", lambda button: callback(button.num))
             self.box.pack_start(button1, True, True, 0)
+
+        width=len(workspaces)*BUTTON_SIZE
+        height=BUTTON_SIZE
+        self.box.set_size_request(width, height)
+        self.window.move(self.screen.get_width()-width, 0)
+        self.window.set_size_request(width, height)
+        self.window.set_resizable(False)
         self.window.show_all()
 
 class I3Thread(threading.Thread):
