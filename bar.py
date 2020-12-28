@@ -44,7 +44,7 @@ class Bar(Gtk.Window):
         self.connect("destroy", Gtk.main_quit)
         self.show_date=False
         self.time_label=None
-        GObject.timeout_add(1000, self.update_time_label)
+        GObject.timeout_add(10_000, self.update_time_label)
 
     def update(self):
         Gtk.main_iteration()

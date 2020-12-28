@@ -7,13 +7,15 @@
 }
 button, button:backdrop {
     background-image: none;
-    background-color: rgba(0, 0, 0, 0.7);
+    background-color: rgba(30, 30, 30, 0.7);
     padding:0px;
     margin:0px;
     border:0px;
     min-height:0px;
 }
-
+:backdrop {
+    color:white;
+}
 button.focused, button.focused:backdrop, button.focused label:backdrop {
     background-color: rgba(192, 202, 51, 0.7);
     color:rgba(0, 0, 0, 0.7);
