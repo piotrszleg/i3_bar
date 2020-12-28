@@ -11,14 +11,20 @@ from i3ipc import Connection, Event
 import threading, queue
 import time
 
-q = queue.Queue()
+# forces the time to be displayed in 12h format
+import locale
+locale.setlocale(locale.LC_TIME, "en_US.utf8")
 
+TITLE="pybar"
+SCREEN_PADDING=2
 BUTTON_SIZE=30
 TIME_WIDTH=70
 
+q = queue.Queue()
+
 class Bar(Gtk.Window):
     def __init__(self):
-        super().__init__(title="pybar", name="toplevel")
+        super().__init__(title=TITLE, name="toplevel")
 
         style_provider = Gtk.CssProvider()
         style_provider.load_from_path("style.css")
@@ -59,9 +65,20 @@ class Bar(Gtk.Window):
         children=(
             child.name
             for child in workspace.descendants()
-            if child.name and child.name!="pybar")
+            if child.name and child.name!=TITLE)
         tooltip="\n".join(children)
-        self.new_workspace_button(workspace.name or "", workspace.num, tooltip, callback)
+        button = self.new_button(workspace.name or "", lambda: callback(workspace.num))
+        button.set_tooltip_text(tooltip)
+        
+        focused=False
+        for child in workspace.descendants():
+            # A silly trick I guess?
+            # The focused workspace will always contain this window,
+            # because it's sticky. Other methods didn't work well.
+            if child.name==TITLE:
+                focused=True
+        if focused:
+            button.get_style_context().add_class("focused")
 
     def switch_hour_date(self):
         self.show_date=not self.show_date
@@ -73,7 +90,7 @@ class Bar(Gtk.Window):
             if self.show_date:
                 time_string = time.strftime("%m/%d/%y", named_tuple)
             else:
-                time_string = time.strftime("%H:%M%p", named_tuple)
+                time_string = time.strftime("%H:%M %p", named_tuple)
             self.time_label.set_label(time_string)
             self.show_all()
         return True
@@ -94,7 +111,7 @@ class Bar(Gtk.Window):
         width=buttons_count*BUTTON_SIZE+TIME_WIDTH
         height=BUTTON_SIZE
         self.box.set_size_request(width, height)
-        self.move(self.screen.get_width()-width, 0)
+        self.move(self.screen.get_width()-width-SCREEN_PADDING, SCREEN_PADDING)
         self.set_size_request(width, height)
         self.set_resizable(False)
         self.show_all()
@@ -109,8 +126,8 @@ class I3Thread(threading.Thread):
         self.queue.put(self.i3.get_tree().descendants())
 
     def on_new_window(self, _, event):
-        if event.container.name=="pybar":
-            self.i3.command("[title=\"pybar\"] floating enable, sticky enable")
+        if event.container.name==TITLE:
+            self.i3.command(f"[title=\"{TITLE}\"] floating enable, sticky enable")
             self.i3.off(self.on_new_window)
             self.i3_update()
         
