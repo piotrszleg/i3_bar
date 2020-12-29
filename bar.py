@@ -21,6 +21,7 @@ BUTTON_SIZE=28
 TIME_WIDTH=70
 
 q = queue.Queue()
+i3=None
 
 class Bar(Gtk.Window):
     def __init__(self):
@@ -44,10 +45,8 @@ class Bar(Gtk.Window):
         self.connect("destroy", Gtk.main_quit)
         self.show_date=False
         self.time_label=None
+        GObject.timeout_add(100, self.update_workspace_buttons)
         GObject.timeout_add(10_000, self.update_time_label)
-
-    def update(self):
-        Gtk.main_iteration()
 
     def new_button(self, name, callback):
         button = Gtk.Button(label=name)
@@ -83,6 +82,14 @@ class Bar(Gtk.Window):
     def switch_hour_date(self):
         self.show_date=not self.show_date
         self.update_time_label()
+
+    def update_workspace_buttons(self):
+        if i3!=None:
+            try:
+                self.update_buttons(q.get_nowait(), i3.switch_to_workspace)
+            except queue.Empty:
+                pass
+        return True
 
     def update_time_label(self):
         if self.time_label!=None:
@@ -149,16 +156,11 @@ class I3Thread(threading.Thread):
         self.i3.command(f"workspace {workspace_index}")
 
 def run():
+    global i3
     i3=I3Thread(q)
     i3.start()
     bar=Bar()
-
-    while True:
-        bar.update()
-        try:
-            bar.update_buttons(q.get_nowait(), i3.switch_to_workspace)
-        except queue.Empty:
-            pass
+    Gtk.main()
 
 if __name__=="__main__":
     run()
