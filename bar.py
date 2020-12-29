@@ -17,7 +17,7 @@ locale.setlocale(locale.LC_TIME, "en_US.utf8")
 
 TITLE="pybar"
 SCREEN_PADDING=2
-BUTTON_SIZE=30
+BUTTON_SIZE=28
 TIME_WIDTH=70
 
 q = queue.Queue()
@@ -73,7 +73,7 @@ class Bar(Gtk.Window):
         focused=False
         for child in workspace.descendants():
             # A silly trick I guess?
-            # The focused workspace will always contain this window,
+            # The focused workspace will always contain the bar window,
             # because it's sticky. Other methods didn't work well.
             if child.name==TITLE:
                 focused=True
@@ -95,13 +95,13 @@ class Bar(Gtk.Window):
             self.show_all()
         return True
     
-    def update_buttons(self, workspaces, callback):
+    def update_buttons(self, containers, callback):
         for child in self.box.get_children():
             self.box.remove(child)
         buttons_count=0
-        for workspace in workspaces:
-            if workspace.type=="workspace" and workspace.name!="__i3_scratch":
-                self.create_button_for_workspace(workspace, callback)
+        for container in containers:
+            if container.type=="workspace" and container.name!="__i3_scratch":
+                self.create_button_for_workspace(container, callback)
                 buttons_count+=1
         
         self.time_label=self.new_button("", self.switch_hour_date)
@@ -126,31 +126,39 @@ class I3Thread(threading.Thread):
         self.queue.put(self.i3.get_tree().descendants())
 
     def on_new_window(self, _, event):
-        if event.container.name==TITLE:
+        # when bar window becomes visible 
+        if event.container.name==TITLE:    
+            # make it floating and sticky
             self.i3.command(f"[title=\"{TITLE}\"] floating enable, sticky enable")
-            self.i3.off(self.on_new_window)
+            # send the containers structure to it
             self.i3_update()
-        
+            # disable this event handler
+            self.i3.off(self.on_new_window)
+
     def run(self):
-        self.i3.on(Event.WORKSPACE, (lambda _, __: self.i3_update()))
-        self.i3.on(Event.WINDOW_NEW, (lambda _, __: self.i3_update()))
-        self.i3.on(Event.WINDOW_CLOSE, (lambda _, __: self.i3_update()))
-
+        # this event is used to set up the bar window
         self.i3.on(Event.WINDOW_NEW, self.on_new_window)
-
+        def update_on(event):
+            self.i3.on(event, (lambda _, __: self.i3_update()))    
+        update_on(Event.WORKSPACE)
+        update_on(Event.WINDOW_NEW)
+        update_on(Event.WINDOW_CLOSE)
         self.i3.main()
     
     def switch_to_workspace(self, workspace_index):
-        self.i3.command(f"move container to workspace {workspace_index}")
         self.i3.command(f"workspace {workspace_index}")
 
-i3=I3Thread(q)
-i3.start()
-bar=Bar()
+def run():
+    i3=I3Thread(q)
+    i3.start()
+    bar=Bar()
 
-while True:
-    bar.update()
-    try:
-        bar.update_buttons(q.get_nowait(), i3.switch_to_workspace)
-    except queue.Empty:
-        pass
+    while True:
+        bar.update()
+        try:
+            bar.update_buttons(q.get_nowait(), i3.switch_to_workspace)
+        except queue.Empty:
+            pass
+
+if __name__=="__main__":
+    run()

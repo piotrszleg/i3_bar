@@ -1,0 +1,4 @@
+#!/bin/sh
+
+killall python3
+sleep 1 && python3 /home/piotr/Programming/python/i3-bar/bar.py &
