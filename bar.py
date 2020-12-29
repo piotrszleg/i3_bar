@@ -85,10 +85,16 @@ class Bar(Gtk.Window):
 
     def update_workspace_buttons(self):
         if i3!=None:
+            containers=None
+            # take all elements from the queue
+            # and apply the latest one
             try:
-                self.update_buttons(q.get_nowait(), i3.switch_to_workspace)
+                while True:
+                    containers=q.get_nowait()
             except queue.Empty:
                 pass
+            if containers!=None:
+                self.update_buttons(containers, i3.switch_to_workspace)
         return True
 
     def update_time_label(self):
