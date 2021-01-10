@@ -1,4 +1,6 @@
 #!/bin/sh
 
-killall python3
+# kill the previous bar instance
+# source: https://askubuntu.com/questions/833303/how-can-i-kill-a-specific-x-window
+wmctrl -lp | awk '/pybar/{print $3}' | xargs kill
 sleep 1 && python3 /home/piotr/Programming/python/i3-bar/bar.py &

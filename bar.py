@@ -11,13 +11,18 @@ from i3ipc import Connection, Event
 import threading, queue
 import time
 
+import pathlib
+
 # forces the time to be displayed in 12h format
 import locale
 locale.setlocale(locale.LC_TIME, "en_US.utf8")
 
+# window title, it is also used by the bash script
 TITLE="pybar"
+# distance from screen edges
 SCREEN_PADDING=2
 BUTTON_SIZE=28
+# time label width
 TIME_WIDTH=70
 
 q = queue.Queue()
@@ -28,7 +33,8 @@ class Bar(Gtk.Window):
         super().__init__(title=TITLE, name="toplevel")
 
         style_provider = Gtk.CssProvider()
-        style_provider.load_from_path("style.css")
+        script_directory=pathlib.Path(__file__).parent.absolute()
+        style_provider.load_from_path(str(script_directory / "style.css"))
 
         self.screen = self.get_screen()
 
